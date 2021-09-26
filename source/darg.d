@@ -16,12 +16,7 @@ module darg;
  */
 class ArgParseError : Exception
 {
-    /**
-     */
-    this(string msg) pure nothrow
-    {
-        super(msg);
-    }
+    this(string msg) pure nothrow { super(msg); }
 }
 
 /**
@@ -29,10 +24,7 @@ class ArgParseError : Exception
  */
 class ArgParseHelp : Exception
 {
-    this(string msg) pure nothrow
-    {
-        super(msg);
-    }
+    this(string msg) pure nothrow { super(msg); }
 }
 
 /**
@@ -43,12 +35,13 @@ struct Option
     /// List of names the option can have.
     string[] names;
 
+    pure nothrow:
     /**
      * Constructs the option with a list of names. Note that any leading "-" or
      * "--" should be omitted. This is added automatically depending on the
      * length of the name.
      */
-    this(string[] names...) pure nothrow
+    this(string[] names...)
     {
         this.names = names;
     }
@@ -56,13 +49,11 @@ struct Option
     /**
      * Returns true if the given option name is equivalent to this option.
      */
-    bool opEquals(string opt) const pure nothrow
+    bool opEquals(string opt) const
     {
         foreach (name; names)
-        {
             if (name == opt)
                 return true;
-        }
 
         return false;
     }
@@ -82,9 +73,9 @@ struct Option
     /**
      * Returns the canonical name of this option. That is, its first name.
      */
-    string toString() const pure nothrow
+    string toString() const
     {
-        return names.length > 0 ? (nameToOption(names[0])) : null;
+        return names.length > 0 ? nameToOption(names[0]) : null;
     }
 
     unittest
@@ -123,6 +114,8 @@ enum Multiplicity
  */
 struct Argument
 {
+    import std.format : format;
+
     /**
      * Name of the argument. Since this is a positional argument, this value is
      * only used in the help string.
@@ -137,13 +130,13 @@ struct Argument
     /// Ditto
     size_t upperBound = 1;
 
+    pure:
     /**
      * Constructs an argument with the given name and count. The count specifies
      * how many argument elements should be consumed from the command line. By
      * default, this is 1.
      */
-    this(string name, size_t count = 1) pure nothrow
-    body
+    this(string name, size_t count = 1) nothrow
     {
         this.name = name;
         this.lowerBound = count;
@@ -154,9 +147,9 @@ struct Argument
      * Constructs an argument with the given name and an upper and lower bound
      * for how many argument elements should be consumed from the command line.
      */
-    this(string name, size_t lowerBound, size_t upperBound) pure nothrow
+    this(string name, size_t lowerBound, size_t upperBound) nothrow
     in { assert(lowerBound < upperBound); }
-    body
+    do
     {
         this.name = name;
         this.lowerBound = lowerBound;
@@ -166,7 +159,7 @@ struct Argument
     /**
      * An argument with a multiplicity specifier.
      */
-    this(string name, Multiplicity multiplicity) pure nothrow
+    this(string name, Multiplicity multiplicity) nothrow
     {
         this.name = name;
 
@@ -190,24 +183,22 @@ struct Argument
     /**
      * Convert to a usage string.
      */
-    @property string usage() const pure
+    @property string usage() const
     {
-        import std.format : format;
-
         if (lowerBound == 0)
         {
             if (upperBound == 1)
                 return "["~ name ~"]";
-            else if (upperBound == upperBound.max)
+            if (upperBound == upperBound.max)
                 return "["~ name ~"...]";
 
             return "["~ name ~"... (up to %d times)]".format(upperBound);
         }
-        else if (lowerBound == 1)
+        if (lowerBound == 1)
         {
             if (upperBound == 1)
                 return name;
-            else if (upperBound == upperBound.max)
+            if (upperBound == upperBound.max)
                 return name ~ " ["~ name ~"...]";
 
             return name ~ " ["~ name ~"... (up to %d times)]"
@@ -232,10 +223,8 @@ struct Argument
      * If there is an error, returns a string explaining the error. Otherwise,
      * returns $(D null).
      */
-    @property string multiplicityError(size_t specified) const pure
+    @property string multiplicityError(size_t specified) const
     {
-        import std.format : format;
-
         if (specified >= lowerBound && specified <= upperBound)
             return null;
 
@@ -244,10 +233,10 @@ struct Argument
             if (lowerBound == 1 && upperBound == 1)
                 return "Expected a value for positional argument '%s'"
                     .format(name);
-            else
-                return ("Expected at least %d values for positional argument" ~
-                    " '%s'. Only %d values were specified.")
-                    .format(lowerBound, name, specified);
+
+            return ("Expected at least %d values for positional argument" ~
+                " '%s'. Only %d values were specified.")
+                .format(lowerBound, name, specified);
         }
 
         // This should never happen. Argument parsing is not greedy.
@@ -309,7 +298,6 @@ private alias void ArgumentHandler(string) pure; /// Ditto
 
 template isOptionHandler(Func)
 {
-    import std.meta : AliasSeq;
     import std.traits : arity, hasFunctionAttributes, isFunction, ReturnType;
 
     static if (isFunction!Func)
@@ -335,7 +323,7 @@ template isArgumentHandler(Func)
         enum isArgumentHandler =
             hasFunctionAttributes!(Func, "pure") &&
             is(ReturnType!Func == void) &&
-            is(Parameters!Func == AliasSeq!(string));
+            is(Parameters!Func == AliasSeq!string);
     }
     else
     {
@@ -347,11 +335,11 @@ unittest
 {
     struct TemplateOptions(T)
     {
-        void optionHandler() pure { }
-        void argumentHandler(string) pure { }
-        string foo() pure { return ""; }
+        void optionHandler() { }
+        void argumentHandler(string) { }
+        string foo() { return ""; }
         void bar() { import std.stdio : writeln; writeln("bar"); }
-        void baz(int) pure { }
+        void baz(int) { }
     }
 
     TemplateOptions!int options;
@@ -402,7 +390,7 @@ unittest
  */
 bool isLongOption(string arg) pure nothrow
 {
-    return arg.length > 2 && arg[0 .. 2] == "--" && arg[2] != '-';
+    return arg.length > 2 && arg[0] == '-' && arg[1] == '-' && arg[2] != '-';
 }
 
 unittest
@@ -430,8 +418,7 @@ bool isOption(string arg) pure nothrow
 
 private static struct OptionSplit
 {
-    string head;
-    string tail;
+    string head, tail;
 }
 
 /**
@@ -459,8 +446,7 @@ unittest
 
 private static struct ArgSplit
 {
-    const(string)[] head;
-    const(string)[] tail;
+    const(string)[] head, tail;
 }
 
 /**
@@ -605,8 +591,8 @@ size_t countArgs(Options)() pure nothrow
 
     foreach (member; __traits(allMembers, Options))
     {
-        alias symbol = Alias!(__traits(getMember, Options, member));
-        alias argUDAs = getUDAs!(symbol, Argument);
+        alias symbol = Alias!(__traits(getMember, Options, member)),
+              argUDAs = getUDAs!(symbol, Argument);
         count += min(argUDAs.length, 1);
     }
 
@@ -626,8 +612,8 @@ size_t countOpts(Options)() pure nothrow
 
     foreach (member; __traits(allMembers, Options))
     {
-        alias symbol = Alias!(__traits(getMember, Options, member));
-        alias optUDAs = getUDAs!(symbol, Option);
+        alias symbol = Alias!(__traits(getMember, Options, member)),
+              optUDAs = getUDAs!(symbol, Option);
         count += min(optUDAs.length, 1);
     }
 
@@ -721,10 +707,7 @@ private void validateOptions(Options)() pure nothrow
  */
 private template hasArgument(T)
 {
-    static if (is(T : OptionFlag) || isOptionHandler!T)
-        enum hasArgument = false;
-    else
-        enum hasArgument = true;
+    enum hasArgument = !(is(T : OptionFlag) || isOptionHandler!T);
 }
 
 unittest
@@ -867,8 +850,8 @@ string usageString(Options)(string program) pure
     // List all arguments
     foreach (member; __traits(allMembers, Options))
     {
-        alias symbol = Alias!(__traits(getMember, Options, member));
-        alias argUDAs = getUDAs!(symbol, Argument);
+        alias symbol = Alias!(__traits(getMember, Options, member)),
+              argUDAs = getUDAs!(symbol, Argument);
 
         static if (argUDAs.length > 0)
             output ~= " "~ argUDAs[0].usage;
@@ -890,8 +873,8 @@ private string argumentHelp(Options, string member)(size_t padding = 14) pure
 
     string output;
 
-    alias symbol = Alias!(__traits(getMember, Options, member));
-    alias argUDAs = getUDAs!(symbol, Argument);
+    alias symbol = Alias!(__traits(getMember, Options, member)),
+          argUDAs = getUDAs!(symbol, Argument);
 
     static if (argUDAs.length > 0)
     {
@@ -1021,7 +1004,7 @@ enum Config
      * Enables option bundling. That is, multiple single character options can
      * be bundled together.
      */
-    bundling = 1 << 0,
+    bundling = 1,
 
     /**
      * Ignore unknown options. These are then parsed as positional arguments.
@@ -1049,10 +1032,10 @@ enum Config
  * Throws: ArgParseError if arguments are invalid.
  */
 T parseArgs(T)(
-        const(string[]) arguments,
-        Config config = Config.default_
-        ) pure
-    if (is(T == struct))
+    const(string[]) arguments,
+    Config config = Config.default_
+) pure
+if (is(T == struct))
 {
     import std.meta : Alias;
     import std.traits : getUDAs;
@@ -1308,7 +1291,7 @@ unittest
 
         @Argument("args", Multiplicity.zeroOrMore)
         @Help("Arguments for the command.")
-        const(string)[] args;
+        string[] args;
     }
 
     immutable options = parseArgs!Options([
